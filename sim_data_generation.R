@@ -1,4 +1,4 @@
-library(bnlear)
+library(bnlearn)
 library(equSA)
 
 generate.dag <- function(num.data, num.nodes, sparsity, seed=0){
@@ -132,10 +132,10 @@ run.simulation.test <- function(N, S, D.range, sparsity, function.list,
 
 
 tabu.xval.test <- function(N, S, D.range, true.sparsity, hyperparam.sparsity, constraint.algo){
-  mean.shd.array <- array(numeric(), c(length(D.range), num.algos + 2))
-  sd.shd.array <- array(numeric(), c(length(D.range), num.algos + 2))
-  best.param.array <- array(numeric(), c(length(D.range), num.algos+1))  
-  mean.run.time <- array(numeric(), c(length(D.range), num.algos+1))  
+  mean.shd.array <- array(numeric(), c(length(D.range),5))
+  sd.shd.array <- array(numeric(), c(length(D.range), 5))
+  best.param.array <- array(numeric(), c(length(D.range), 5))  
+  mean.run.time <- array(numeric(), c(length(D.range), 4))  
   
   
   colnames(mean.shd.array) <- c(c("N", "D"), c("tabu.null", "tabu.init", "tabu.constraint"))
@@ -151,25 +151,25 @@ tabu.xval.test <- function(N, S, D.range, true.sparsity, hyperparam.sparsity, co
     
     # Run for tabu.null
     tabu.null <- tabu.hyperparam.iteration(N, d, S, sparsity, tabu.range, start=NULL, constraint.algo=NULL)
-    mean.shd.array[d.num, 2] <- tabu.null$mean
-    sd.shd.array[d.num, 2] <- tabu.null$std
+    mean.shd.array[d.num, 3] <- tabu.null$mean
+    sd.shd.array[d.num, 3] <- tabu.null$std
     best.param.array[d.num, 2] <- tabu.null$hyperparam
     mean.run.time[d.num, 2] <- tabu.null$av.run.time  
     
     # Run for tabu.random
     tabu.random <- tabu.hyperparam.iteration(N, d, S, sparsity, tabu.range, start="random", constraint.algo=NULL)
-    mean.shd.array[d.num, 3] <- tabu.random$mean
-    sd.shd.array[d.num, 3] <- tabu.random$std
+    mean.shd.array[d.num, 4] <- tabu.random$mean
+    sd.shd.array[d.num, 4] <- tabu.random$std
     best.param.array[d.num, 3] <- tabu.random$hyperparam
     best.param.array[d.num, 4] <- 0.2
     mean.run.time[d.num, 3] <- tabu.random$av.run.time  
     
-    # Run for tabu.constraint
-    tabu.constraint <- tabu.hyperparam.iteration(N, d, S, sparsity, tabu.range, start=NULL, constraint.algo=constraint.algo)
-    mean.shd.array[d.num, 4] <- tabu.constraint$mean
-    sd.shd.array[d.num, 4] <- tabu.constraint$std
-    best.param.array[d.num, 5] <- tabu.constraint$hyperparam
-    mean.run.time[d.num, 4] <- tabu.constraint$av.run.time  
+    # # Run for tabu.constraint
+    # tabu.constraint <- tabu.hyperparam.iteration(N, d, S, sparsity, tabu.range, start=NULL, constraint.algo=constraint.algo)
+    # mean.shd.array[d.num, 5] <- tabu.constraint$mean
+    # sd.shd.array[d.num, 5] <- tabu.constraint$std
+    # best.param.array[d.num, 5] <- tabu.constraint$hyperparam
+    # mean.run.time[d.num, 4] <- tabu.constraint$av.run.time  
     
     d.num <- d.num + 1
   } 
@@ -181,30 +181,31 @@ tabu.learning.iteration <- function(N, d, s, sparsity, tabu, start=NULL, constra
   sim.data.df <- as.data.frame(sim.dag$data)
   start.time <- Sys.time()
   print(sprintf(
-    'D: %s. Sparsity: %s. Seed: %s. start: %s. constraint: %s Tabu Val: %s. Time: %s',
-    d, sparsity, s, start, constraint.algo, tabu, start.time
+    'D: %s. Sparsity: %s. Seed: %s. Tabu Val: %s. Time: %s',
+    d, sparsity, s, tabu, start.time
   ))
-  if (start='random'){
-    set.seed(s)
-    start <- randomDAG(d, 0.2, V=nodes(sim.dag$graph))
-  } else {
+  if (is.null(start)){
     if (!is.null(constraint.algo)){
       start <- constraint.algo(sim.data.df)
     }
-    tabu.dag <- function.list[[algo]](
-      sim.data.df, 
-      tabu=tabu, 
-      max.tabu=tabu,
-      start=start
-    )
+  } else if (start=='random'){
+    set.seed(s)
+    start <- random.graph(nodes(sim.dag$graph), 1, method='ordered')
   }
+  tabu.dag <- tabu(
+    sim.data.df, 
+    tabu=tabu,
+    score='bge',
+    max.tabu=tabu,
+    start=start
+  )
   run.time <- Sys.time() - start.time
   shd <- shd(cpdag(tabu.dag), cpdag(sim.dag$graph))
-  return("shd"=shd, "run.time"=run.time)
+  return(list("shd"=shd, "run.time"=run.time))
 }
 
 
-tabu.hyperparam.iteration <- function(N, d, S, tabu.range, start, constraint.algo=NULL){
+tabu.hyperparam.iteration <- function(N, d, S, sparsity, tabu.range, start=NULL, constraint.algo=NULL){
   #'
   best.shd.mean <- 1e9
   for (tabu.frac in tabu.range){
@@ -213,7 +214,7 @@ tabu.hyperparam.iteration <- function(N, d, S, tabu.range, start, constraint.alg
     shd.vals <- c()
     run.times <- c()
     for (s in 1:S){
-      tabu.results <- tabu.learning.iteration(N, d, s, sparsity, start, constraint.algo)
+      tabu.results <- tabu.learning.iteration(N, d, s, sparsity, tabu, start, constraint.algo)
       shd.vals <- c(shd.vals, tabu.results$shd)
       run.times <- c(run.times, tabu.results$run.time)
     }
@@ -224,8 +225,105 @@ tabu.hyperparam.iteration <- function(N, d, S, tabu.range, start, constraint.alg
       av.run.time <- mean(run.times)
     }
   }
-  return('mean'=best.shd.mean, 
-         'std'=best.shd.std,
-         'hyperparam'=best.hyperparam, 
-         'run.time'=av.run.time)
+  return(list(
+     'mean'=best.shd.mean, 
+     'std'=best.shd.std,
+     'hyperparam'=best.hyperparam, 
+     'av.run.time'=av.run.time))
+}
+
+hc.xval.test <- function(N, S, D.range, true.sparsity, hyperparam.sparsity, constraint.algo){
+  mean.shd.array <- array(numeric(), c(length(D.range),5))
+  sd.shd.array <- array(numeric(), c(length(D.range), 5))
+  best.param.array <- array(numeric(), c(length(D.range), 4))  
+  mean.run.time <- array(numeric(), c(length(D.range), 4))  
+  
+  
+  colnames(mean.shd.array) <- c(c("N", "D"), c("hc.null", "hc.init", "hc.constraint"))
+  colnames(mean.shd.array) <- c(c("N", "D"), c("hc.null", "hc.init", "hc.constraint"))
+  colnames(best.param.array) <- c("D", c("hc.null", "hc.init.sparsity", "hc.constraint"))
+  colnames(mean.run.time) <- c("D", c("hc.null", "hc.init", "hc.constraint"))
+  
+  d.num <- 1
+  for (d in D.range){
+    mean.shd.array[d.num, 1] <- N; sd.shd.array[d.num, 1] <- N
+    mean.shd.array[d.num, 2] <- d; sd.shd.array[d.num, 2] <- d
+    best.param.array[d.num, 1] <- d; mean.run.time[d.num, 1] <- d
+    
+    # Run for hc.null
+    hc.null <- hc.hyperparam.iteration(N, d, S, sparsity, start=NULL, constraint.algo=NULL)
+    mean.shd.array[d.num, 3] <- hc.null$mean
+    sd.shd.array[d.num, 3] <- hc.null$std
+    best.param.array[d.num, 2] <- hc.null$hyperparam
+    mean.run.time[d.num, 2] <- hc.null$av.run.time  
+    
+    # Run for hc.random
+    hc.random <- hc.hyperparam.iteration(N, d, S, sparsity, start="random", constraint.algo=NULL)
+    mean.shd.array[d.num, 4] <- hc.random$mean
+    sd.shd.array[d.num, 4] <- hc.random$std
+    best.param.array[d.num, 3] <- hc.random$hyperparam
+    mean.run.time[d.num, 3] <- hc.random$av.run.time  
+    
+    # # Run for hc.constraint
+    # hc.constraint <- hc.hyperparam.iteration(N, d, S, sparsity, start=NULL, constraint.algo=constraint.algo)
+    # mean.shd.array[d.num, 5] <- hc.constraint$mean
+    # sd.shd.array[d.num, 5] <- hc.constraint$std
+    # best.param.array[d.num, 4] <- hc.constraint$hyperparam
+    # mean.run.time[d.num, 4] <- hc.constraint$av.run.time  
+    
+    d.num <- d.num + 1
+  } 
+  return(list('mean'=mean.shd.array, 'std'=sd.shd.array, 'best.params'=best.param.array, "times"=mean.run.time))
+}
+
+hc.learning.iteration <- function(N, d, s, sparsity, start=NULL, constraint.algo=NULL){
+  sim.dag <- generate.dag(N, d, sparsity, s)
+  sim.data.df <- as.data.frame(sim.dag$data)
+  start.time <- Sys.time()
+  print(sprintf(
+    'D: %s. Sparsity: %s. Seed: %s. Time: %s',
+    d, sparsity, s, start.time
+  ))
+  if (is.null(start)){
+    if (!is.null(constraint.algo)){
+      start <- constraint.algo(sim.data.df)
+    }
+  } else if (start=='random'){
+    set.seed(s)
+    start <- random.graph(nodes(sim.dag$graph), 1, method='ordered')
+  }
+  hc.dag <- hc(
+    sim.data.df, 
+    score='bge',
+    restart=10,
+    peturb=5,
+    start=start
+  )
+  run.time <- Sys.time() - start.time
+  shd <- shd(cpdag(hc.dag), cpdag(sim.dag$graph))
+  return(list("shd"=shd, "run.time"=run.time))
+}
+
+
+hc.hyperparam.iteration <- function(N, d, S, sparsity, start=NULL, constraint.algo=NULL){
+  #'
+  best.shd.mean <- 1e9
+  # Multiply hc frac by number of nodes
+  hc <- ceiling(d * hc.frac)
+  shd.vals <- c()
+  run.times <- c()
+  for (s in 1:S){
+    hc.results <- hc.learning.iteration(N, d, s, sparsity, start, constraint.algo)
+    shd.vals <- c(shd.vals, hc.results$shd)
+    run.times <- c(run.times, hc.results$run.time)
+  }
+  if (mean(shd.vals) < best.shd.mean) {
+    best.shd.mean <- mean(shd.vals)
+    best.shd.std <- sd(shd.vals)
+    av.run.time <- mean(run.times)
+  }
+  return(list(
+    'mean'=best.shd.mean, 
+    'std'=best.shd.std,
+    'av.run.time'=av.run.time))
 }

@@ -1,7 +1,7 @@
 import numpy as np
 
-N = 10  # Number of data points
-D = 5  # Dimensionality, equivalent to the number of nodes
+N = 1000  # Number of data points
+D = 10  # Dimensionality, equivalent to the number of nodes
 ETA = 0.3  # Sparsity: the probability of an edge being present
 SEED = 0
 
@@ -60,17 +60,17 @@ def main():
     # Save file
     np.savetxt(
         "data/simulated_data/true_graph_seed_{}_N_{}_D_{}.csv".format(SEED, N, D),
-        graph,
+        np.around(graph, 0),
         delimiter=','
     )
     np.savetxt(
         "data/simulated_data/true_weights_seed_{}_N_{}_D_{}.csv".format(SEED, N, D),
-        weights,
+        np.around(weights, 3),
         delimiter=','
     )
     np.savetxt(
         "data/simulated_data/sim_data_seed_{}_N_{}_D_{}.csv".format(SEED, N, D),
-        data,
+        np.around(data, 3),
         delimiter=','
     )
 

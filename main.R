@@ -1,6 +1,11 @@
+library(reticulate)
+# import('scipy')
+use_condaenv("r-reticulate")
+source_python('./notears/notears/linear.py')
+
 library(bnlearn)
 library(equSA)
-library(ggplot2)
+# library(ggplot2)
 library(reshape2)
 library(Rgraphviz)
 library(purrr)
@@ -18,42 +23,53 @@ inter.iamb.f <- partial(inter.iamb, test = 'mi-g-sh', undirected = FALSE)
 iamb.fdr.f <- partial(iamb.fdr, test = 'mi-g-sh', undirected = FALSE)
 mmpc.f <- partial(mmpc, test = 'mi-g-sh', undirected = FALSE)
 si.hiton.pc.f <- partial(si.hiton.pc, test = 'mi-g-sh', undirected = FALSE)
-hpc.f <- partial(hpc, test = 'mi-g-sh', undirected = FALSE, debug=FALSE)
+hpc.f <- partial(hpc, test = 'mi-g-sh', undirected = FALSE)
 
 # Score based methods
-tabu.f <- partial(tabu, score = 'bge')
-hc.f <- partial(hc, score = 'bge')
+tabu.f <- partial(tabu, score = 'bic-g')
+hc.f <- partial(hc, perturb=20, score = 'bic-g')
 
 # # Hybrid methods
 # mmpc.f <- partial(rsmax2, restrict='mmpc', maximise='hc', restrict.args=list(alpha=0.01), 
 #                   maximize.args=list(restart=10, perturb=5, max.iter=100000))
 
-constraint.bn.func <- list(
+# Regression
+# lingam.f <- lingam.bn
+notears.f <- partial(notears_linear, loss_type='l2')
+
+bn.func <- list(
   "pc"=pc.f,
   "gs"=gs.f,
-  # "iamb"=iamb.f,
+  "iamb"=iamb.f,
   "fast.iamb"=fast.iamb.f,
   "inter.iamb"= inter.iamb.f,
   "iamb.fdr"=inter.iamb.f,
   # "mmpc"=mmpc.f,
-  "si.hiton.pc"=si.hiton.pc.f,
-  "hpc"=hpc.f
+  # "si.hiton.pc"=si.hiton.pc.f,
+  # "hpc"=hpc.f,
+  "notears"=notears.f,
+  "tabu"=tabu.f,
+  "hc"=hc.f
 )
 
 
 # Define hyperparameter ranges
-alpha.range <- c(0.1, 0.05, 0.01, 0.005, 0.001); tabu.range<- c(0.1, 0.5, 1, 1.5, 3, 7); 
+alpha.range <- c(0.1, 0.05, 0.01, 0.005, 0.001) 
+tabu.range<- c(0.1, 0.5, 1, 1.5, 3, 7)
+restart.range <- c(1, 5, 10, 20, 50)
+l1.range <- c(0.001, 0.01, 0.1, 1)
 
 # Define graph parameter ranges
-D.range <- seq(20, 120, 20)
+D.range <- seq(20, 80, 20)
 sparsity.range <- c(0.05)#c(0.005, 0.01, 0.05, 0.1)
 N <- 150 # Num of simulated observations
-S <- 20 # Number of seeded runs
+S <- 5 # Number of seeded runs
 
 for (sparsity in sparsity.range){
   start.time <- Sys.time()
   sim.shd.results <- run.simulation.test(
-    N, S, D.range, sparsity, constraint.bn.func, alpha.range, tabu.range, gamma=0
+    N, S, D.range, sparsity, bn.func, 
+    alpha.range, tabu.range, restart.range, l1.range, gamma=0
   )
   end.time <- Sys.time()
   print(sprintf("Start: %s. Finish: %s. Duration: %s", start.time, end.time, end.time-start.time))

@@ -1,4 +1,8 @@
-calculate.performance.statistics <- function(true.graph, learned.graph){
+library(bnlearn)
+library(equSA)
+library(pcalg)
+
+calculate.performance.statistics <- function(learned.graph, true.graph){
   #' Takes in two graph objects of 'bn' class
   adj.true <- amat(true.graph)
   adj.learned <- amat(learned.graph)
@@ -65,3 +69,21 @@ generate.dag <- function(num.data, num.nodes, sparsity, seed=0){
   
   return(list("graph" = dag.graph, "data" = sim.data))
 }
+
+
+convert.amat.to.bn <- function(adj.matrix){
+  bn.g <- empty.graph(colnames(adj.matrix))
+  amat(bn.g) <- (adj.matrix != 0) * 1
+  return(bn.g)
+}
+#' 
+#' 
+#' lingam.bn <- function(data){
+#'   #' Learns a DAG structure from input data using
+#'   #' LinGAM function, and returns a bn object.
+#'   bn.g <- empty.graph(colnames(data))
+#'   learned.lingam <- lingam(data)
+#'   amat(bn.g) <- (learned.lingam$Bpruned != 0) * 1
+#'   
+#'   return(bn.g)
+#' }

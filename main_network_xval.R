@@ -38,7 +38,7 @@ constraints.bn.func <- list(
   "inter.iamb"= inter.iamb.f,
   "iamb.fdr"=inter.iamb.f
 )
-n.runs <- 50
+n.runs <- 100
 n.range <- c(100, 300)
 network.name <- 'ecoli'
 ecoli <- readRDS('bnlearn_networks/ecoli70.rds')
@@ -80,22 +80,22 @@ hc.const.results <- hc.xval.network(
   ecoli
 )
 save.template <- "data/results/simulated_networks/%s/hc_validation/%s_runs_%s.csv"
-write.csv(tabu.const.results$cpdag, sprintf(save.template, network.name, 'shd_cpdag', n.runs), row.names = FALSE)
-write.csv(tabu.const.results$moral, sprintf(save.template, network.name, 'shd_moral', n.runs), row.names = FALSE)
-write.csv(tabu.const.results$bic, sprintf(save.template, network.name, 'bic', n.runs), row.names = FALSE)
-write.csv(tabu.const.results$fdr, sprintf(save.template, network.name, 'fdr', n.runs), row.names = FALSE)
-write.csv(tabu.const.results$sensitivity, sprintf(save.template, network.name, 'sensitivity', n.runs), row.names = FALSE)
-
-l1.range <- c(0.001, 0.01, 0.1, 1, 10)
-notears.const.results <- notears.xval.network(
-  l1.range,
-  n.runs,
-  n.range,
-  ecoli
-)
-save.template <- "data/results/simulated_networks/%s/notears_validation/%s_runs_%s.csv"
-write.csv(notears.const.results$cpdag, sprintf(save.template, network.name, 'shd_cpdag', n.runs), row.names = FALSE)
-write.csv(notears.const.results$moral, sprintf(save.template, network.name, 'shd_moral', n.runs), row.names = FALSE)
-write.csv(notears.const.results$bic, sprintf(save.template, network.name, 'bic', n.runs), row.names = FALSE)
-write.csv(notears.const.results$fdr, sprintf(save.template, network.name, 'fdr', n.runs), row.names = FALSE)
-write.csv(notears.const.results$sensitivity, sprintf(save.template, network.name, 'sensitivity', n.runs), row.names = FALSE)
+write.csv(hc.const.results$cpdag, sprintf(save.template, network.name, 'shd_cpdag', n.runs), row.names = FALSE)
+write.csv(hc.const.results$moral, sprintf(save.template, network.name, 'shd_moral', n.runs), row.names = FALSE)
+write.csv(hc.const.results$bic, sprintf(save.template, network.name, 'bic', n.runs), row.names = FALSE)
+write.csv(hc.const.results$fdr, sprintf(save.template, network.name, 'fdr', n.runs), row.names = FALSE)
+write.csv(hc.const.results$sensitivity, sprintf(save.template, network.name, 'sensitivity', n.runs), row.names = FALSE)
+# 
+# l1.range <- c(0.0001, 0.001, 0.01, 0.1, 1)
+# notears.const.results <- notears.xval.network(
+#   l1.range,
+#   n.runs,
+#   n.range,
+#   ecoli
+# )
+# save.template <- "data/results/simulated_networks/%s/notears_validation/%s_runs_%s.csv"
+# write.csv(notears.const.results$cpdag, sprintf(save.template, network.name, 'shd_cpdag', n.runs), row.names = FALSE)
+# write.csv(notears.const.results$moral, sprintf(save.template, network.name, 'shd_moral', n.runs), row.names = FALSE)
+# write.csv(notears.const.results$bic, sprintf(save.template, network.name, 'bic', n.runs), row.names = FALSE)
+# write.csv(notears.const.results$fdr, sprintf(save.template, network.name, 'fdr', n.runs), row.names = FALSE)
+# write.csv(notears.const.results$sensitivity, sprintf(save.template, network.name, 'sensitivity', n.runs), row.names = FALSE)

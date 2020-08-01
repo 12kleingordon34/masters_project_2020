@@ -53,8 +53,8 @@ alpha.const.results <- alpha.constraint.xval.ranDAG(
 )
 
 save.template <- "data/results/simulated_gaussian/alpha_validation/%s_runs_%s.csv"
-write.csv(alpha.const.results$cpdag, sprintf(save.template, 'shd_cpdag', n.runs), row.names = FALSE)
-write.csv(alpha.const.results$moral, sprintf(save.template, 'shd_moral', n.runs), row.names = FALSE)
+write.csv(alpha.const.results$shd, sprintf(save.template, 'shd', n.runs), row.names = FALSE)
+write.csv(alpha.const.results$hd, sprintf(save.template, 'hd', n.runs), row.names = FALSE)
 write.csv(alpha.const.results$bic, sprintf(save.template, 'bic', n.runs), row.names = FALSE)
 write.csv(alpha.const.results$fdr, sprintf(save.template, 'fdr', n.runs), row.names = FALSE)
 write.csv(alpha.const.results$sensitivity, sprintf(save.template, 'sensitivity', n.runs), row.names = FALSE)
@@ -64,17 +64,18 @@ tabu.const.results <- tabu.xval.ranDAG(
   tabu.range, n.runs, d.range, max.n
 )
 save.template <- "data/results/simulated_gaussian/tabu_validation/%s_runs_%s.csv"
-write.csv(tabu.const.results$cpdag, sprintf(save.template, 'shd_cpdag', n.runs), row.names = FALSE)
-write.csv(tabu.const.results$moral, sprintf(save.template, 'shd_moral', n.runs), row.names = FALSE)
+write.csv(tabu.const.results$shd, sprintf(save.template, 'shd', n.runs), row.names = FALSE)
+write.csv(tabu.const.results$hd, sprintf(save.template, 'hd', n.runs), row.names = FALSE)
 write.csv(tabu.const.results$bic, sprintf(save.template, 'bic', n.runs), row.names = FALSE)
 write.csv(tabu.const.results$fdr, sprintf(save.template, 'fdr', n.runs), row.names = FALSE)
 write.csv(tabu.const.results$sensitivity, sprintf(save.template, 'sensitivity', n.runs), row.names = FALSE)
 
+# HC Restart
 restart.range <- c(0, 1, 5, 10, 25, 50)
-hc.const.results <- hc.xval.ranDAG(restart.range, n.runs, d.range, max.n)
+hc.const.results <- hc.xval.ranDAG(restart.range, NULL, n.runs, d.range, max.n)
 save.template <- "data/results/simulated_gaussian/hc_validation/%s_runs_%s.csv"
-write.csv(hc.const.results$cpdag, sprintf(save.template, 'shd_cpdag', n.runs), row.names = FALSE)
-write.csv(hc.const.results$moral, sprintf(save.template, 'shd_moral', n.runs), row.names = FALSE)
+write.csv(hc.const.results$shd, sprintf(save.template, 'shd', n.runs), row.names = FALSE)
+write.csv(hc.const.results$hd, sprintf(save.template, 'hd', n.runs), row.names = FALSE)
 write.csv(hc.const.results$bic, sprintf(save.template, 'bic', n.runs), row.names = FALSE)
 write.csv(hc.const.results$fdr, sprintf(save.template, 'fdr', n.runs), row.names = FALSE)
 write.csv(hc.const.results$sensitivity, sprintf(save.template, 'sensitivity', n.runs), row.names = FALSE)
@@ -82,8 +83,8 @@ write.csv(hc.const.results$sensitivity, sprintf(save.template, 'sensitivity', n.
 l1.range <- c(0.0001, 0.001, 0.01, 0.1, 1)
 notears.const.results <- notears.xval.ranDAG(l1.range, n.runs, d.range, max.n)
 save.template <- "data/results/simulated_gaussian/notears_validation/%s_runs_%s.csv"
-write.csv(notears.const.results$cpdag, sprintf(save.template, 'shd_cpdag', n.runs), row.names = FALSE)
-write.csv(notears.const.results$moral, sprintf(save.template, 'shd_moral', n.runs), row.names = FALSE)
+write.csv(notears.const.results$shd, sprintf(save.template, 'shd', n.runs), row.names = FALSE)
+write.csv(notears.const.results$hd, sprintf(save.template, 'hd', n.runs), row.names = FALSE)
 write.csv(notears.const.results$bic, sprintf(save.template, 'bic', n.runs), row.names = FALSE)
 write.csv(notears.const.results$fdr, sprintf(save.template, 'fdr', n.runs), row.names = FALSE)
 write.csv(notears.const.results$sensitivity, sprintf(save.template, 'sensitivity', n.runs), row.names = FALSE)

@@ -79,6 +79,79 @@ confusion.shd.simulation <- function(algorithms, data.size, run.number, bn.fitte
   ))
 }
 
+data.size.study.network <- function(algorithms, data.size.ranges, n.runs, network){
+  #' Take a fitted BN and generate `n.data.size` samples, and learn
+  #' a network across all algorithms in function.list. Repeat
+  #' over n.runs. 
+  #' 
+  #' Returns arrays of the SHD for CPDAG and Moralised graphs.
+  num.algos <- length(algorithms)
+  D <- length(nodes(network))
+  # CPDAG Structural Hamming Distance
+  shd.array <- array(numeric(), c(0, num.algos + 3))
+  # Moralized Structural Hamming Distance
+  hd.array <- array(numeric(), c(0, num.algos + 3))
+  # BIC Criterion
+  bic.array <- array(numeric(), c(0, num.algos + 3))
+  # False Discovery Rate
+  fdr.array <- array(numeric(), c(0, num.algos + 3))
+  # Sensitivity
+  sensitivity.array <- array(numeric(), c(0, num.algos + 3))
+  
+  colnames(shd.array) <- c(c("run", "N", "D"), names(algorithms))
+  colnames(hd.array) <- c(c("run", "N", "D"), names(algorithms))
+  colnames(fdr.array) <- c(c("run", "N", "D"), names(algorithms))
+  colnames(sensitivity.array) <- c(c("run", "N", "D"), names(algorithms))
+  for (data.size in data.size.ranges){
+    for (r in seq(1, n.runs, 1)){
+      algo.graphs <- vector('list', length(algorithms))
+      set.seed(r)
+      sim.data <- rbn(network, n=data.size)
+      row <- c(r, data.size, D)
+      row.shd <- row;  row.hd <- row;  bic.row <- row; fdr.row <- row
+      sensitivity.row <- row
+      for (algo in seq(1, length(algorithms), 1)){
+        start.time <- Sys.time()
+        print(sprintf(
+          'Run number: %s/%s. Algo: %s. Data size: %s. Time: %s',
+          r, n.runs, names(algorithms)[algo], data.size, start.time
+        ))       
+        if (grepl('notears', names(algorithms)[algo], fixed=TRUE)){
+          amat.dag <- algorithms[[algo]](sim.data)
+          colnames(amat.dag) <- colnames(as.matrix(sim.data))
+          fitted.network <- convert.amat.to.bn(amat.dag)
+        } else if (grepl('tabu', names(algorithms)[algo], fixed=TRUE)){
+          fitted.network <- algorithms[[algo]](
+            sim.data,
+            tabu=D,
+            score='bge'
+          )
+        } else fitted.network <- algorithms[[algo]](sim.data)
+        
+        shd <- bnlearn::shd(cpdag(fitted.network), cpdag(network))
+        row.shd <- c(row.shd, shd)
+        hd <- bnlearn::hamming(moral(fitted.network), moral(network))
+        row.hd <- c(row.hd, hd)
+        performance.metrics <- calculate.performance.statistics(
+          cpdag(fitted.network), cpdag(network)
+        )
+        fdr.row <- c(fdr.row, performance.metrics$fdr)
+        sensitivity.row <- c(sensitivity.row, performance.metrics$sensitivity)        
+      } # For algo loop
+      shd.array <- rbind(shd.array, row.shd)
+      hd.array <- rbind(hd.array, row.hd)
+      fdr.array <- rbind(fdr.array, fdr.row)
+      sensitivity.array <- rbind(sensitivity.array, sensitivity.row)
+      } # FOR runs
+    } # For Data size
+  return(list(
+    'shd'=data.frame(shd.array),
+    'hd'=data.frame(hd.array),
+    'fdr'=fdr.array,
+    'sensitivity'=sensitivity.array
+  ))
+}
+
 alpha.xval.network <- function(functions.bn, alpha.range, n.runs, n.range, network, gamma=0){
   #' For `n.runs` iterations, sample `N` (the number of datapoints) points uniformally
   #' from a bn.fit object `network` . 
@@ -116,7 +189,6 @@ alpha.xval.network <- function(functions.bn, alpha.range, n.runs, n.range, netwo
     sim.data <- rbn(network, n=N)
     for (a in alpha.range){
       sim.data.df <- as.data.frame(sim.data)    
-      start.time <- Sys.time()
       row <- c(N, D, a)
       row.shd <- row
       row.hd <- row
@@ -124,16 +196,32 @@ alpha.xval.network <- function(functions.bn, alpha.range, n.runs, n.range, netwo
       fdr.row <- row
       sensitivity.row <- row
       for (algo in 1:length(functions.bn)){
+        start.time <- Sys.time()
+        algo.name <-  names(functions.bn)[algo]
         print(sprintf(
           'Run number: %s/%s. Algo: %s Alpha Val: %s. Time: %s',
-          n, n.runs, names(functions.bn)[algo], a, start.time
+          n, n.runs, algo.name, a, start.time
         ))       
-        learned.dag <- functions.bn[[algo]](sim.data.df, alpha=a)  
+        if (substr(algo.name, 1, 6) == "hybrid"){
+          if (grepl('tabu', algo.name, fixed=TRUE)){
+            learned.dag <- functions.bn[[algo]](
+              sim.data.df,
+              restrict.args=list(alpha=a),
+              maximize.args=list(tabu=D)
+            )  
+          } else{
+            learned.dag <- functions.bn[[algo]](
+              sim.data.df,
+              restrict.args=list(alpha=a)
+            )  
+          }
+        } else learned.dag <- functions.bn[[algo]](sim.data.df, alpha=a)  
         shd <- bnlearn::shd(cpdag(learned.dag), cpdag(network))
         row.shd <- c(row.shd, shd)
-        hd <- bnlearn::hamming(cpdag(learned.dag), cpdag(network))
+        hd <- bnlearn::hamming(moral(learned.dag), moral(network))
         row.hd <- c(row.hd, hd)
-        bic <- ebic(learned.dag, sim.data.df, gamma=gamma)
+        # bic <- ebic(learned.dag, sim.data.df, gamma=gamma)
+        bic <- 9
         bic.row <- c(bic.row, bic)
         performance.metrics <- calculate.performance.statistics(
           cpdag(learned.dag), cpdag(network)
@@ -157,7 +245,7 @@ alpha.xval.network <- function(functions.bn, alpha.range, n.runs, n.range, netwo
   ))
 }
 
-hc.xval.network <- function(restart.range, n.runs, n.range, network, gamma=0.){
+hc.xval.network <- function(restart.range, perturb.range, n.runs, n.range, network, gamma=0.){
   #' For `n.runs` iterations, sample `N` (the number of datapoints) points uniformally
   #' from a bn.fit object `network` . 
   #' For each algorithm in functions.bn, learn a graph for each alpha within
@@ -170,68 +258,67 @@ hc.xval.network <- function(restart.range, n.runs, n.range, network, gamma=0.){
 
   D <- length(nodes(network))
   # CPDAG Structural Hamming Distance
-  shd.array <- array(numeric(), c(0, 6))
+  shd.array <- array(numeric(), c(0, 7))
   # Moralized Structural Hamming Distance
-  hd.array <- array(numeric(), c(0, 6))
+  hd.array <- array(numeric(), c(0, 7))
   # BIC Criterion
-  bic.array <- array(numeric(), c(0, 6))
+  bic.array <- array(numeric(), c(0, 7))
   # False Discovery Rate
-  fdr.array <- array(numeric(), c(0, 6))
+  fdr.array <- array(numeric(), c(0, 7))
   # Sensitivity
-  sensitivity.array <- array(numeric(), c(0, 6))
+  sensitivity.array <- array(numeric(), c(0, 7))
   
-  colnames(shd.array) <- c(c("N", "D", "graph.init", "restart.no", "score", 'shd'))
-  colnames(hd.array) <- c(c("N", "D", "graph.init", "restart.no", "score", 'hd'))
-  colnames(bic.array) <- c(c("N", "D", "graph.init", "restart.no", "score", 'bic'))
-  colnames(fdr.array) <- c(c("N", "D", "graph.init", "restart.no", "score", "fdr"))
-  colnames(sensitivity.array) <- c(c("N", "D", "graph.init", "restart.no", "score", "sensitivity"))
+  colnames(shd.array) <- c(c("N", "D", "graph.init", "restart.no", "perturb", "score", 'shd'))
+  colnames(hd.array) <- c(c("N", "D", "graph.init", "restart.no", "perturb", "score", 'hd'))
+  colnames(bic.array) <- c(c("N", "D", "graph.init", "restart.no", "perturb", "score", 'bic'))
+  colnames(fdr.array) <- c(c("N", "D", "graph.init", "restart.no", "perturb", "score", "fdr"))
+  colnames(sensitivity.array) <- c(c("N", "D", "graph.init", "restart.no", "perturb", "score", "sensitivity"))
   
   for (n in seq(1, n.runs)){
     N <- sample(n.range[1]:n.range[2], 1)
     set.seed(n)
     sim.data <- rbn(network, n=N)
-    for (restart.no in restart.range){
-      sim.data.df <- as.data.frame(sim.data)    
-      start.time <- Sys.time()
-      for (i in c('random', 'empty')){
-        for (s in c('bic-g', 'bge')){
-          row <- c(N, D, i, restart.no, s)
-          row.shd <- row
-          row.hd <- row
-          bic.row <- row
-          fdr.row <- row
-          sensitivity.row <- row
-          print(sprintf(
-            'Run number: %s/%s. Graph Type: %s Restart number: %s. Time: %s',
-            n, n.runs, i, restart.no, start.time
-          ))
-          if (!is.null(start)){
-            initial.graph <- random.graph(nodes(network), 1, method='ordered')
-          } else initial.graph <- random.graph(nodes(network), 1, method='empty')
-          learned.dag <- hc(
-            sim.data.df, 
-            start=initial.graph, 
-            restart=restart.no, 
-            perturb=20,
-            score=s
-          )
-          shd <- bnlearn::shd(cpdag(learned.dag), cpdag(network))
-          row.shd <- c(row.shd, shd)
-          hd <- bnlearn::hamming(cpdag(learned.dag), cpdag(network))
-          row.hd <- c(row.hd, hd)
-          bic <- ebic(learned.dag, sim.data.df, gamma=gamma)
-          bic.row <- c(bic.row, bic)
-          performance.metrics <- calculate.performance.statistics(
-            cpdag(learned.dag), cpdag(network)
-          )
-          fdr.row <- c(fdr.row, performance.metrics$fdr)
-          sensitivity.row <- c(sensitivity.row, performance.metrics$sensitivity)        
-          
-          shd.array <- rbind(shd.array, row.shd)
-          hd.array <- rbind(hd.array, row.hd)
-          bic.array <- rbind(bic.array, bic.row)
-          fdr.array <- rbind(fdr.array, fdr.row)
-          sensitivity.array <- rbind(sensitivity.array, sensitivity.row)
+    for (r in restart.range){
+      for (p in perturb.range){
+        sim.data.df <- as.data.frame(sim.data)    
+        start.time <- Sys.time()
+        for (i in c('random', 'empty')){
+          for (s in c('bic-g', 'bge')){
+            row <- c(N, D, i, r, p, s)
+            row.shd <- row; row.hd <- row; bic.row <- row; fdr.row <- row; sensitivity.row <- row
+            print(sprintf(
+              'Run number: %s/%s. Graph Type: %s Restart number: %s. Perturbations: %s Time: %s',
+              n, n.runs, i, r, p, start.time
+            ))
+            if (i == "random"){
+              initial.graph <- random.graph(nodes(network), 1, method='ordered')
+            } else initial.graph <- random.graph(nodes(network), 1, method='empty')
+            learned.dag <- hc(
+              sim.data.df, 
+              start=initial.graph, 
+              restart=r, 
+              perturb=p,
+              score=s
+            )
+            shd <- bnlearn::shd(cpdag(learned.dag), cpdag(network))
+            row.shd <- c(row.shd, shd)
+            hd <- bnlearn::hamming(moral(learned.dag), moral(network))
+            row.hd <- c(row.hd, hd)
+            # bic <- ebic(learned.dag, sim.data.df, gamma=gamma)
+            bic <- 9
+            bic.row <- c(bic.row, bic)
+            performance.metrics <- calculate.performance.statistics(
+              cpdag(learned.dag), cpdag(network)
+            )
+            fdr.row <- c(fdr.row, performance.metrics$fdr)
+            sensitivity.row <- c(sensitivity.row, performance.metrics$sensitivity)        
+            
+            shd.array <- rbind(shd.array, row.shd)
+            hd.array <- rbind(hd.array, row.hd)
+            bic.array <- rbind(bic.array, bic.row)
+            fdr.array <- rbind(fdr.array, fdr.row)
+            sensitivity.array <- rbind(sensitivity.array, sensitivity.row)
+          }
         } # FOR score
       }
     } # FOR alpha.range
@@ -281,7 +368,6 @@ tabu.xval.network <- function(tabu.range, n.runs, n.range, network, gamma=0.){
     for (tabu.frac in tabu.range){
       tabu.length <- ceiling(D * tabu.frac)
       sim.data.df <- as.data.frame(sim.data)    
-      start.time <- Sys.time()
       for (i in c('random', 'empty')){
         for (s in c('bic-g', 'bge')){
           row <- c(N, D, i, tabu.frac, s)
@@ -290,6 +376,7 @@ tabu.xval.network <- function(tabu.range, n.runs, n.range, network, gamma=0.){
           bic.row <- row
           fdr.row <- row
           sensitivity.row <- row
+          start.time <- Sys.time()
           print(sprintf(
             'Run number: %s/%s. Graph Type: %s Tabu length: %s. Score: %s. Time: %s',
             n, n.runs, i, tabu.length, s, start.time
@@ -307,7 +394,8 @@ tabu.xval.network <- function(tabu.range, n.runs, n.range, network, gamma=0.){
           row.shd <- c(row.shd, shd)
           hd <- bnlearn::hamming(moral(learned.dag), moral(network))
           row.hd <- c(row.hd, hd)
-          bic <- ebic(learned.dag, sim.data.df, gamma=gamma)
+          # bic <- ebic(learned.dag, sim.data.df, gamma=gamma)
+          bic <- 9
           bic.row <- c(bic.row, bic)
           performance.metrics <- calculate.performance.statistics(
             cpdag(learned.dag), cpdag(network)
@@ -371,13 +459,13 @@ notears.xval.network <- function(l1.range, n.runs, n.range, network, gamma=0.){
       sim.data.df <- rbn(network, n=N)
       sim.data <- as.matrix(sim.data.df)    
   
-      start.time <- Sys.time()
       row <- c(N, D, n+shift, l1)
       row.shd <- row
       row.hd <- row
       bic.row <- row
       fdr.row <- row
       sensitivity.row <- row
+      start.time <- Sys.time()
       print(sprintf(
         'Run number: %s/%s. Lambda1: %s. Time: %s',
         n, n.runs, l1, start.time
@@ -398,9 +486,10 @@ notears.xval.network <- function(l1.range, n.runs, n.range, network, gamma=0.){
       
       shd <- bnlearn::shd(cpdag(learned.dag), cpdag(network))
       row.shd <- c(row.shd, shd)
-      hd <- bnlearn::hamming(cpdag(learned.dag), cpdag(network))
+      hd <- bnlearn::hamming(moral(learned.dag), moral(network))
       row.hd <- c(row.hd, hd)
-      bic <- ebic(bn.fit(learned.dag, sim.data.df), sim.data.df, gamma=gamma)
+      # bic <- ebic(bn.fit(learned.dag, sim.data.df), sim.data.df, gamma=gamma)
+      bic <- 9
       bic.row <- c(bic.row, bic)
       performance.metrics <- calculate.performance.statistics(
         cpdag(learned.dag), cpdag(network)
@@ -491,7 +580,6 @@ alpha.network.search <- function(functions.bn, alpha.range, data.size.range, n.r
   ))
 }
   
-
 network.search <- function(functions.bn, alpha.range, data.size.range, n.runs, bn.fitted){
   #' For datasizes N in the vector `data.size.range`, generate 
   #' `n.runs` datasets from the network `bn.fitted`. Calculate the 

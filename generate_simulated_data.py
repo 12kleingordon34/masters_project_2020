@@ -1,10 +1,12 @@
 import numpy as np
+import os
+os.environ['KMP_DUPLICATE_LIB_OK']='True'
 
-N = 1000  # Number of data points
+N = 5000  # Number of data points
 D = 4 # Dimensionality, equivalent to the number of nodes
 ETA = 0.4  # Sparsity: the probability of an edge being present
 SEED = 0
-DISTRIBUTION = 'gamma'
+DISTRIBUTION = 'gaussian'
 
 
 def generate_graph(num_nodes, num_data, sparsity, seed=SEED):
@@ -48,9 +50,9 @@ def simulate_data(weights, num_data, num_nodes, distribution, seed):
         if distribution == 'gaussian':
             np.random.seed(seed+n)
             noise = np.random.normal(0, 1, num_nodes)
-            data[n, 0] = noise[0]
+            data[n, 0] = noise[0] + 1
             for i in range(1, num_nodes):
-                data[n, i] = np.dot(data[n, :i], weights[:i, i]) + noise[i]
+                data[n, i] = np.dot(data[n, :], weights[:, i]) + noise[i]
         if distribution == 'gamma':
             data[n, 0] = np.random.gamma(shape=2, scale=2)
             for i in range(1, num_nodes):
@@ -62,9 +64,25 @@ def simulate_data(weights, num_data, num_nodes, distribution, seed):
 
 
 def main():
-    graph = generate_graph(D, N, ETA, SEED)
+    #graph = generate_graph(D, N, ETA, SEED)
+    graph = np.array([
+        [0,0,0,1,1,0,0,0,0,0],
+        [0,0,1,0,0,0,0,0,0,0],
+        [0,0,0,0,0,0,0,0,0,0],
+        [0,1,0,0,0,0,0,0,0,0],
+        [0,1,0,0,0,0,0,0,0,0],
+        [0,0,1,0,0,0,0,0,0,0],
+        [0,0,1,0,0,0,0,0,0,0],
+        [0,0,1,0,0,0,0,0,0,0],
+        [0,0,1,0,0,0,0,0,0,0],
+        [0,0,0,0,0,1,1,1,1,0]
+    ])
+    print(graph)
     weights = create_weights(graph, SEED)
-    data = simulate_data(weights, N, D, DISTRIBUTION, SEED)
+    weights = graph * 2
+    print(weights)
+    print(graph.shape[0])
+    data = simulate_data(weights, N, graph.shape[0], DISTRIBUTION, SEED)
 
     # Save file
     np.savetxt(
@@ -82,6 +100,11 @@ def main():
         np.around(data, 3),
         delimiter=','
     )
+    np.savetxt(
+        "data/simulated_data/bootstrap_sample_N_{}.csv".format(N),
+        np.around(data, 3),
+        delimiter=','
+    )
 
-if __name__ == '__main__':
-    main()
+#if __name__ == '__main__':
+#    main()

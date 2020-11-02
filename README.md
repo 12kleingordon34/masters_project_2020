@@ -1,5 +1,5 @@
 # Master's Project (2020)
-Submitted thesis: [./masters_thesis.pdf](masters_thesis.pdf).
+Submitted thesis: [masters_thesis.pdf](./masters_thesis.pdf).
 
 Code DOCUMENTATION INCOMPLETE
 

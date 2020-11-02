@@ -1,6 +1,7 @@
 # Master's Project (2020)
+Submitted thesis: [./masters_thesis.pdf](masters_thesis.pdf).
 
-DOCUMENTATION INCOMPLETE
+Code DOCUMENTATION INCOMPLETE
 
 The general purposes of the files are as follows:
 

@@ -13,7 +13,7 @@ ALPHA.FDR.PATH <- sprintf('./data/results/simulated_gaussian/alpha_validation/fd
 ALPHA.SENSITIVITY.PATH <- sprintf('./data/results/simulated_gaussian/alpha_validation/sensitivity_runs_%s.csv', sample.number)
 ALPHA.PATHS <- list(
   'SHD (CPDAG)'=ALPHA.CPDAG.PATH, 
-  'SHD (Moralised)'=ALPHA.MORAL.PATH,
+  'HD (Moralised)'=ALPHA.MORAL.PATH,
   'FDR'=ALPHA.FDR.PATH,
   'Sensitivity'=ALPHA.SENSITIVITY.PATH
 )
@@ -21,6 +21,19 @@ ALPHA.PATHS <- list(
 # Plotting histograms
 melted.alpha.full <- NULL
 mu.full <- NULL
+label.map <- list(
+  'iamb.fdr'='IAMB FDR',
+  'inter.iamb'='InterIAMB',
+  'fast.iamb'='Fast IAMB',
+  'iamb'='IAMB',
+  'gs'='GS',
+  'pc'='PC',
+  'N'='N',
+  'D'='D',
+  'sparsity'='sparsity',
+  'alpha'='alpha'
+)
+
 for (i in 1:length(ALPHA.PATHS)){
   path <- ALPHA.PATHS[[i]]
   name <- names(ALPHA.PATHS)[i]
@@ -30,6 +43,14 @@ for (i in 1:length(ALPHA.PATHS)){
     id.vars=c('alpha', 'D'),
     measure.vars=c('pc', 'gs', 'iamb', 'fast.iamb', 'inter.iamb', 'iamb.fdr')
   )
+  for (i in seq(1, length(label.map))){
+    melted.alpha$variable <- str_replace_all(
+      melted.alpha$variable,
+      names(label.map)[i], label.map[i][[1]]
+    )
+  }
+  
+  
   if (grepl('HD', name)) melted.alpha$value <- melted.alpha$value / melted.alpha$D 
   melted.alpha['alpha'] = lapply(melted.alpha['alpha'], as.character)
   melted.alpha$data.type <- name
@@ -49,27 +70,28 @@ for (i in 1:length(ALPHA.PATHS)){
 }
 melted.alpha.full$data.type <- factor(
   melted.alpha.full$data.type,
-  levels=c("SHD (CPDAG)", 'SHD (Moralised)', 'FDR', 'Sensitivity')
+  levels=c("SHD (CPDAG)", 'HD (Moralised)', 'FDR', 'Sensitivity')
 )
 mu.full$data.type <- factor(
   mu.full$data.type,
-  levels=c("SHD (CPDAG)", 'SHD (Moralised)', 'FDR', 'Sensitivity')
+  levels=c("SHD (CPDAG)", 'HD (Moralised)', 'FDR', 'Sensitivity')
 )
-alpha.plot <- ggplot(melted.alpha.full, aes(x=value, fill=alpha)) +
+(alpha.plot <- ggplot(melted.alpha.full, aes(x=value, fill=alpha)) +
   geom_histogram(position='identity', alpha=0.3, bins=20) + 
   scale_fill_discrete(name = "Alpha") +
   geom_vline(data=mu.full, aes(xintercept=value, color=alpha),
              linetype="dashed", show.legend=FALSE) +
-  labs(y='Count', x='Value')+
+  labs(y='Count', x='')+
   facet_grid(
     variable ~ data.type,
-    scales='free_x'
+    scales='free_x',
+    switch='x'
   ) +
   theme(aspect.ratio=1.2,
         panel.spacing.x=unit(4.5, "mm"), 
         plot.margin=grid::unit(c(0,0,0,0),"mm"),
         legend.title=element_text(size=11),
-        legend.text=element_text(size=9))
+        legend.text=element_text(size=9)))
 
 ggsave(
   "./report/figures/alpha_gaussian_plot.pdf",
@@ -87,14 +109,16 @@ TABU.FDR.PATH <- sprintf('./data/results/simulated_gaussian/tabu_validation/fdr_
 TABU.SENSITIVITY.PATH <- sprintf('./data/results/simulated_gaussian/tabu_validation/sensitivity_runs_%s.csv', sample.number)
 TABU.PATHS <- list(
   'SHD (CPDAG)'=TABU.CPDAG.PATH, 
-  'SHD (Moralised)'=TABU.MORAL.PATH,
+  'HD (Moralised)'=TABU.MORAL.PATH,
   'FDR'=TABU.FDR.PATH,
   'Sensitivity'=TABU.SENSITIVITY.PATH
 )
-melted.tabu.tabu.full <- NULL
+melted.tabu.full <- NULL
 mu.tabu.full <- NULL
-melted.tabu.graph.full <- NULL
+melted.graph.full <- NULL
 mu.graph.full <- NULL
+
+score.mapping <- list('bic-g'='BIC', 'bge'='BGe')
 for (i in 1:length(TABU.PATHS)){
   path <- TABU.PATHS[[i]]
   name <- names(TABU.PATHS)[i]
@@ -104,6 +128,13 @@ for (i in 1:length(TABU.PATHS)){
     id.vars=c('tabu.frac', 'graph.init', 'score', 'D'),
     measure.vars=names(tabu.sim.gaussian)[length(names(tabu.sim.gaussian))]
   )
+  for (i in seq(1, length(score.mapping))){
+    melted.tabu$score <- str_replace_all(
+      melted.tabu$score,
+      names(score.mapping)[i], score.mapping[i][[1]]
+    )
+  }
+  
   if (grepl('HD', name)) melted.tabu$value <- melted.tabu$value / melted.tabu$D 
   melted.tabu['tabu.frac'] = lapply(melted.tabu['tabu.frac'], as.character)
   
@@ -129,30 +160,31 @@ for (i in 1:length(TABU.PATHS)){
 }
 melted.tabu.full$data.type <- factor(
   melted.tabu.full$data.type,
-  levels=c("SHD (CPDAG)", 'SHD (Moralised)', 'FDR', 'Sensitivity')
+  levels=c("SHD (CPDAG)", 'HD (Moralised)', 'FDR', 'Sensitivity')
 )
 mu.tabu.full$data.type <- factor(
   mu.tabu.full$data.type,
-  levels=c("SHD (CPDAG)", 'SHD (Moralised)', 'FDR', 'Sensitivity')
+  levels=c("SHD (CPDAG)", 'HD (Moralised)', 'FDR', 'Sensitivity')
 )
 mu.graph.full$data.type <- factor(
   mu.graph.full$data.type,
-  levels=c("SHD (CPDAG)", 'SHD (Moralised)', 'FDR', 'Sensitivity')
+  levels=c("SHD (CPDAG)", 'HD (Moralised)', 'FDR', 'Sensitivity')
 )
 melted.tabu.full <- melted.tabu.full[
   ((melted.tabu.full$value < 4) & (melted.tabu.full$data.type =='SHD (CPDAG)'))
-  | ((melted.tabu.full$value < 15) & (melted.tabu.full$data.type =='SHD (Moralised)'))
-  | ((melted.tabu.full$data.type != 'SHD (CPDAG)') & (melted.tabu.full$data.type != 'SHD (Moralised)')),
+  | ((melted.tabu.full$value < 15) & (melted.tabu.full$data.type =='HD (Moralised)'))
+  | ((melted.tabu.full$data.type != 'SHD (CPDAG)') & (melted.tabu.full$data.type != 'HD (Moralised)')),
 ]
 tabu.tabu.plot <- ggplot(melted.tabu.full[melted.tabu.full$graph.init=='random',], aes(x=value, fill=tabu.frac)) +
   geom_histogram(position='identity', alpha=0.5, bins=20) + 
   scale_fill_discrete(name = "Tabu Fraction") +
   geom_vline(data=mu.tabu.full[mu.tabu.full$graph.init=='random',], aes(xintercept=value, color=tabu.frac),
              linetype="dashed", show.legend = FALSE) +
-  labs(x='Value', y='Count') +
+  labs(x='', y='Count') +
   facet_grid(
     score ~ data.type,
-    scales='free_x'
+    scales='free_x',
+    switch='x'
   ) + theme(aspect.ratio=1.2,
             panel.spacing.x=unit(4.5, "mm"), 
             plot.margin=grid::unit(c(0,0,0,0),"mm"),
@@ -170,10 +202,11 @@ tabu.graph.plot <- ggplot(melted.tabu.full[melted.tabu.full$tabu.frac == 1, ], a
   scale_fill_discrete(name = "Tabu Fraction") +
   geom_vline(data=mu.graph.full[mu.graph.full$tabu.frac == 1, ], aes(xintercept=value, color=graph.init),
              linetype="dashed", show.legend = FALSE) +
-  labs(x='Value', y='Count') +
+  labs(x='', y='Count') +
   facet_grid(
     score ~ data.type,
-    scales='free_x'
+    scales='free_x',
+    switch='x'
   ) + theme(aspect.ratio=1.2,
             panel.spacing.x=unit(4.5, "mm"), 
             plot.margin=grid::unit(c(0,0,0,0),"mm"),
@@ -195,7 +228,7 @@ HC.FDR.PATH <- sprintf('./data/results/simulated_gaussian/hc_validation/fdr_runs
 HC.SENSITIVITY.PATH <- sprintf('./data/results/simulated_gaussian/hc_validation/sensitivity_runs_%s.csv', sample.number)
 HC.PATHS <- list(
   'SHD (CPDAG)'=HC.CPDAG.PATH, 
-  'SHD (Moralised)'=HC.MORAL.PATH,
+  'HD (Moralised)'=HC.MORAL.PATH,
   'FDR'=HC.FDR.PATH,
   'Sensitivity'=HC.SENSITIVITY.PATH
 )
@@ -203,6 +236,7 @@ melted.hc.full <- NULL
 mu.restart.full <- NULL
 mu.perturb.full <- NULL
 mu.graph.init <- NULL
+score.mapping <- list('bic-g'='BIC', 'bge'='BGe')
 
 for (i in 1:length(HC.PATHS)){
   path <- HC.PATHS[[i]]
@@ -213,6 +247,13 @@ for (i in 1:length(HC.PATHS)){
     id.vars=c('restart.no', 'graph.init', 'perturb', 'score', 'D'),
     measure.vars=names(hc.sim.gaussian)[length(names(hc.sim.gaussian))]
   )
+  for (i in seq(1, length(score.mapping))){
+    melted.hc$score <- str_replace_all(
+      melted.hc$score,
+      names(score.mapping)[i], score.mapping[i][[1]]
+    )
+  }
+  
   if (grepl('HD', name)) melted.hc$value <- melted.hc$value / melted.hc$D 
   melted.hc['restart.no'] = lapply(melted.hc['restart.no'], as.character)
   melted.hc['perturb'] = lapply(melted.hc['perturb'], as.character)
@@ -243,25 +284,25 @@ for (i in 1:length(HC.PATHS)){
 
 melted.hc.full <- melted.hc.full[
   ((melted.hc.full$value < 3) & (melted.hc.full$data.type =='SHD (CPDAG)'))
-  | ((melted.hc.full$value < 3) & (melted.hc.full$data.type =='SHD (Moralised)'))
-  | ((melted.hc.full$data.type != 'SHD (CPDAG)') & (melted.hc.full$data.type != 'SHD (Moralised)')),
+  | ((melted.hc.full$value < 3) & (melted.hc.full$data.type =='HD (Moralised)'))
+  | ((melted.hc.full$data.type != 'SHD (CPDAG)') & (melted.hc.full$data.type != 'HD (Moralised)')),
 ]
 
 melted.hc.full$data.type <- factor(
   melted.hc.full$data.type,
-  levels=c("SHD (CPDAG)", 'SHD (Moralised)', 'FDR', 'Sensitivity')
+  levels=c("SHD (CPDAG)", 'HD (Moralised)', 'FDR', 'Sensitivity')
 )
 mu.restart.full$data.type <- factor(
   mu.restart.full$data.type,
-  levels=c("SHD (CPDAG)", 'SHD (Moralised)', 'FDR', 'Sensitivity')
+  levels=c("SHD (CPDAG)", 'HD (Moralised)', 'FDR', 'Sensitivity')
 )
 mu.perturb.full$data.type <- factor(
   mu.perturb.full$data.type,
-  levels=c("SHD (CPDAG)", 'SHD (Moralised)', 'FDR', 'Sensitivity')
+  levels=c("SHD (CPDAG)", 'HD (Moralised)', 'FDR', 'Sensitivity')
 )
 mu.graph.full$data.type <- factor(
   mu.graph.full$data.type,
-  levels=c("SHD (CPDAG)", 'SHD (Moralised)', 'FDR', 'Sensitivity')
+  levels=c("SHD (CPDAG)", 'HD (Moralised)', 'FDR', 'Sensitivity')
 )
 hc.restart.plot <- ggplot(melted.hc.full[mu.restart.full$perturb == 50,], aes(x=value, fill=restart.no)) +
   geom_histogram(position='identity', alpha=0.4, bins=20) + 
@@ -270,9 +311,10 @@ hc.restart.plot <- ggplot(melted.hc.full[mu.restart.full$perturb == 50,], aes(x=
              linetype="dashed", show.legend = FALSE) +
   facet_grid(
     score ~ data.type,
-    scales='free_x'
+    scales='free_x',
+    switch='x'
   ) +
-  labs(x='Value', y='Count') +
+  labs(x='', y='Count') +
   theme(aspect.ratio=1.2,
         panel.spacing.x=unit(4.5, "mm"), 
         plot.margin=grid::unit(c(0,0,0,0),"mm"),
@@ -287,10 +329,11 @@ hc.perturb.plot <- ggplot(
   scale_fill_discrete(name = "Perturbations") +
   geom_vline(data=mu.perturb.full[mu.perturb.full$restart.no == 50,], aes(xintercept=value, color=perturb),
              linetype="dashed", show.legend=FALSE) +
-  labs(x='Value', y='Count') +
+  labs(x='', y='Count') +
   facet_grid(
     score ~ data.type,
-    scales='free_x'
+    scales='free_x',
+    switch='x'
   ) +
   theme(aspect.ratio=1.2,
         panel.spacing.x=unit(4.5, "mm"), 
@@ -304,11 +347,11 @@ hc.graph.plot <- ggplot(melted.hc.full, aes(x=value, fill=graph.init)) +
   scale_fill_discrete(name = "Graph Init.") +
   geom_vline(data=mu.graph.full, aes(xintercept=value, color=graph.init),
              linetype="dashed", show.legend=FALSE) +
-  labs(x='Value', y='Count') +
+  labs(x='', y='Count') +
   facet_grid(
     score ~ data.type,
-    scales='free_x'
-    # space='free'
+    scales='free_x',
+    switch='x'
   ) +
   theme(aspect.ratio=1.2,
         panel.spacing.x=unit(4.5, "mm"), 
@@ -346,7 +389,7 @@ NT.FDR.PATH <- sprintf('./data/results/simulated_gaussian/notears_validation/fdr
 NT.SENSITIVITY.PATH <- sprintf('./data/results/simulated_gaussian/notears_validation/sensitivity_runs_full.csv', sample.number)
 NT.PATHS <- list(
   'SHD (CPDAG)'=NT.CPDAG.PATH, 
-  'SHD (Moralised)'=NT.MORAL.PATH,
+  'HD (Moralised)'=NT.MORAL.PATH,
   'FDR'=NT.FDR.PATH,
   'Sensitivity'=NT.SENSITIVITY.PATH
 )
@@ -389,17 +432,17 @@ for (i in 1:length(NT.PATHS)){
 #Filter for extreme values (purely for graphical reasons)
 melted.nt.full <- melted.nt.full[
   ((melted.nt.full$value < 5) & (melted.nt.full$data.type =='SHD (CPDAG)'))
-  | ((melted.nt.full$value < 15) & (melted.nt.full$data.type =='SHD (Moralised)'))
-  | ((melted.nt.full$data.type != 'SHD (CPDAG)') & (melted.nt.full$data.type != 'SHD (Moralised)')),
+  | ((melted.nt.full$value < 15) & (melted.nt.full$data.type =='HD (Moralised)'))
+  | ((melted.nt.full$data.type != 'SHD (CPDAG)') & (melted.nt.full$data.type != 'HD (Moralised)')),
 ]
 
 melted.nt.full$data.type <- factor(
   melted.nt.full$data.type,
-  levels=c("SHD (CPDAG)", 'SHD (Moralised)', 'FDR', 'Sensitivity')
+  levels=c("SHD (CPDAG)", 'HD (Moralised)', 'FDR', 'Sensitivity')
 )
 mu.full$data.type <- factor(
   mu.full$data.type,
-  levels=c("SHD (CPDAG)", 'SHD (Moralised)', 'FDR', 'Sensitivity')
+  levels=c("SHD (CPDAG)", 'HD (Moralised)', 'FDR', 'Sensitivity')
 )
 nt.plot <- ggplot(melted.nt.full, aes(x=value, fill=l1)) +
   geom_histogram(position='identity', alpha=0.4, bins=20) + 
@@ -408,9 +451,10 @@ nt.plot <- ggplot(melted.nt.full, aes(x=value, fill=l1)) +
              linetype="dashed", show.legend=FALSE) +
   facet_grid(
     . ~ data.type,
-    scales='free_x'
+    scales='free_x',
+    switch='x'
   ) +
-  labs(x='Value', y='Count') +
+  labs(x='', y='Count') +
   theme(aspect.ratio=1.2,
         panel.spacing.x=unit(4.5, "mm"), 
         plot.margin=grid::unit(c(0,0,0,0),"mm"),
@@ -430,11 +474,18 @@ HYBRID.MORAL.PATH <- sprintf('./data/results/simulated_gaussian/hybrid/hd_runs_%
 HYBRID.FDR.PATH <- sprintf('./data/results/simulated_gaussian/hybrid/fdr_runs_%s.csv', NUM.RUNS)
 HYBRID.SENSITIVITY.PATH <- sprintf('./data/results/simulated_gaussian/hybrid/sensitivity_runs_%s.csv', NUM.RUNS)
 HYBRID.PATHS <- list(
-  'SHD (CPDAG)'=HYBRID.CPDAG.PATH, 
-  'SHD (Moralised)'=HYBRID.MORAL.PATH,
+  'SHD (CPDAG)'=HYBRID.CPDAG.PATH,
+  'HD (Moralised)'=HYBRID.MORAL.PATH,
   'FDR'=HYBRID.FDR.PATH,
   'Sensitivity'=HYBRID.SENSITIVITY.PATH
 )
+hybrid.label.map <- list(
+  'hybrid.iamb.hc'='InterIAMB with HC',
+  'hybrid.h2pc.hc'='H2PC',
+  'hybrid.mmhc.hc'='MMHC',
+  'hybrid.hiton.hc'='SI-HITON-PC'
+)
+
 
 # Plotting histograms
 melted.hybrid.full <- NULL
@@ -448,6 +499,13 @@ for (i in 1:length(HYBRID.PATHS)){
     id.vars=c('alpha', 'D'),
     measure.vars=names(hybrid.sim.gaussian)[5:length(hybrid.sim.gaussian)]
   )
+  for (i in seq(1, length(hybrid.label.map))){
+    melted.hybrid$variable <- str_replace_all(
+      melted.hybrid$variable,
+      names(hybrid.label.map)[i], hybrid.label.map[i][[1]]
+    )
+  }
+  
   if (grepl('HD', name)) melted.hybrid$value <- melted.hybrid$value / melted.hybrid$D 
   melted.hybrid['alpha'] = lapply(melted.hybrid['alpha'], as.character)
   melted.hybrid$data.type <- name
@@ -467,21 +525,22 @@ for (i in 1:length(HYBRID.PATHS)){
 }
 melted.hybrid.full$data.type <- factor(
   melted.hybrid.full$data.type,
-  levels=c("SHD (CPDAG)", 'SHD (Moralised)', 'FDR', 'Sensitivity')
+  levels=c("SHD (CPDAG)", 'HD (Moralised)', 'FDR', 'Sensitivity')
 )
 mu.full$data.type <- factor(
   mu.full$data.type,
-  levels=c("SHD (CPDAG)", 'SHD (Moralised)', 'FDR', 'Sensitivity')
+  levels=c("SHD (CPDAG)", 'HD (Moralised)', 'FDR', 'Sensitivity')
 )
 hybrid.plot <- ggplot(melted.hybrid.full, aes(x=value, fill=alpha)) +
   geom_histogram(position='identity', alpha=0.5, bins=20) + 
   scale_fill_discrete(name = "Alpha") +
   geom_vline(data=mu.full, aes(xintercept=value, color=alpha),
              linetype="dashed", show.legend=FALSE) +
-  labs(y='Count', x='Value')+
+  labs(y='Count', x='')+
   facet_grid(
     variable ~ data.type,
-    scales='free_x'
+    scales='free_x',
+    switch='x'
   ) +
   theme(aspect.ratio=1.2,
         panel.spacing.x=unit(4.5, "mm"), 
@@ -505,7 +564,7 @@ DATA.SIZE.SENSITIVITY <- sprintf('./data/results/simulated_gaussian/data_size/se
 
 DATA.SIZE.PATHS <- list(
   'SHD (CPDAG)'=DATA.SIZE.SHD, 
-  'SHD (Moralised)'=DATA.SIZE.HD,
+  'HD (Moralised)'=DATA.SIZE.HD,
   'FDR'=DATA.SIZE.FDR,
   'Sensitivity'=DATA.SIZE.SENSITIVITY
 )
@@ -539,11 +598,11 @@ for (i in 1:length(DATA.SIZE.PATHS)){
 }
 melted.data.size.full$data.type <- factor(
   melted.data.size.full$data.type,
-  levels=c("SHD (CPDAG)", 'SHD (Moralised)', 'FDR', 'Sensitivity')
+  levels=c("SHD (CPDAG)", 'HD (Moralised)', 'FDR', 'Sensitivity')
 )
 mu.full$data.type <- factor(
   mu.full$data.type,
-  levels=c("SHD (CPDAG)", 'SHD (Moralised)', 'FDR', 'Sensitivity')
+  levels=c("SHD (CPDAG)", 'HD (Moralised)', 'FDR', 'Sensitivity')
 )
 melted.data.size.full$N <- factor(
   melted.data.size.full$N,
@@ -556,13 +615,13 @@ mu.full$N <- factor(
 
 melted.data.size.full <- melted.data.size.full[
   ((melted.data.size.full$value < 100) & (melted.data.size.full$data.type =='SHD (CPDAG)'))
-  | ((melted.data.size.full$value < 100) & (melted.data.size.full$data.type =='SHD (Moralised)'))
-  | ((melted.data.size.full$data.type != 'SHD (CPDAG)') & (melted.data.size.full$data.type != 'SHD (Moralised)')),
+  | ((melted.data.size.full$value < 100) & (melted.data.size.full$data.type =='HD (Moralised)'))
+  | ((melted.data.size.full$data.type != 'SHD (CPDAG)') & (melted.data.size.full$data.type != 'HD (Moralised)')),
 ]
 mu.full <- mu.full[
   ((mu.full$value < 100) & (mu.full$data.type =='SHD (CPDAG)'))
-  | ((mu.full$value < 100) & (mu.full$data.type =='SHD (Moralised)'))
-  | ((mu.full$data.type != 'SHD (CPDAG)') & (mu.full$data.type != 'SHD (Moralised)')),
+  | ((mu.full$value < 100) & (mu.full$data.type =='HD (Moralised)'))
+  | ((mu.full$data.type != 'SHD (CPDAG)') & (mu.full$data.type != 'HD (Moralised)')),
 ]
 
 data.size.plot <- ggplot(melted.data.size.full, aes(x=value, fill=variable)) +
@@ -570,9 +629,11 @@ data.size.plot <- ggplot(melted.data.size.full, aes(x=value, fill=variable)) +
   scale_fill_discrete(name = "Algorithm") +
   geom_vline(data=mu.full, aes(xintercept=value, color=variable),
              linetype="dashed", show.legend=FALSE) +
+  labs(y='Count', x='')+
   facet_grid(
     N ~ data.type,
-    scales='free_x'
+    scales='free_x',
+    switch='x'
   ) +
   theme(aspect.ratio=1.2,
         panel.spacing.x=unit(4.5, "mm"), 
@@ -597,7 +658,7 @@ GRAPH.SIZE.SENSITIVITY <- sprintf('./data/results/simulated_gaussian/data_size/s
 
 GRAPH.SIZE.PATHS <- list(
   'SHD (CPDAG)'=GRAPH.SIZE.SHD, 
-  'SHD (Moralised)'=GRAPH.SIZE.HD,
+  'HD (Moralised)'=GRAPH.SIZE.HD,
   'FDR'=GRAPH.SIZE.FDR,
   'Sensitivity'=GRAPH.SIZE.SENSITIVITY
 )
@@ -631,11 +692,11 @@ for (i in 1:length(GRAPH.SIZE.PATHS)){
 }
 melted.graph.size.full$data.type <- factor(
   melted.graph.size.full$data.type,
-  levels=c("SHD (CPDAG)", 'SHD (Moralised)', 'FDR', 'Sensitivity')
+  levels=c("SHD (CPDAG)", 'HD (Moralised)', 'FDR', 'Sensitivity')
 )
 mu.full$data.type <- factor(
   mu.full$data.type,
-  levels=c("SHD (CPDAG)", 'SHD (Moralised)', 'FDR', 'Sensitivity')
+  levels=c("SHD (CPDAG)", 'HD (Moralised)', 'FDR', 'Sensitivity')
 )
 melted.graph.size.full$D <- factor(
   melted.graph.size.full$D,
@@ -648,23 +709,25 @@ mu.full$D <- factor(
 
 melted.graph.size.full <- melted.graph.size.full[
   ((melted.graph.size.full$value < 1.5) & (melted.graph.size.full$data.type =='SHD (CPDAG)'))
-  | ((melted.graph.size.full$value < 2) & (melted.graph.size.full$data.type =='SHD (Moralised)'))
-  | ((melted.graph.size.full$data.type != 'SHD (CPDAG)') & (melted.graph.size.full$data.type != 'SHD (Moralised)')),
+  | ((melted.graph.size.full$value < 2) & (melted.graph.size.full$data.type =='HD (Moralised)'))
+  | ((melted.graph.size.full$data.type != 'SHD (CPDAG)') & (melted.graph.size.full$data.type != 'HD (Moralised)')),
 ]
 mu.full <- mu.full[
   ((mu.full$value < 100) & (mu.full$data.type =='SHD (CPDAG)'))
-  | ((mu.full$value < 100) & (mu.full$data.type =='SHD (Moralised)'))
-  | ((mu.full$data.type != 'SHD (CPDAG)') & (mu.full$data.type != 'SHD (Moralised)')),
+  | ((mu.full$value < 100) & (mu.full$data.type =='HD (Moralised)'))
+  | ((mu.full$data.type != 'SHD (CPDAG)') & (mu.full$data.type != 'HD (Moralised)')),
 ]
 
 (graph.size.plot <- ggplot(melted.graph.size.full, aes(x=value, fill=variable)) +
-  geom_histogram(position='identity', alpha=0.4, bins=50) + 
+  geom_histogram(position='identity', alpha=0.5, bins=15) + 
   scale_fill_discrete(name = "Algorithm", labels=c("GS", "InterIAMB", "H2PC", "MMHC", "SI-HITON-PC" , "NOTEARS", "Hybrid NOTEARS")) +
   geom_vline(data=mu.full, aes(xintercept=value, color=variable),
              linetype="dashed", show.legend=FALSE) +
+  + labs(y='Count', x='')+
   facet_grid(
     D ~ data.type,
-    scales='free_x'
+    scales='free_x',
+    switch='x'
   ) +
   theme(aspect.ratio=1.2,
         panel.spacing.x=unit(4.5, "mm"), 

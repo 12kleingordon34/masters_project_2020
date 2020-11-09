@@ -14,3 +14,4 @@ The general purposes of the files are as follows:
 
 ### TO DOs
 * Implemeant variance update step on NOTEARS
+* ...

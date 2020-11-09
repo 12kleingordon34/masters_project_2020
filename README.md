@@ -13,4 +13,4 @@ The general purposes of the files are as follows:
 * `utils.R` contains helper functions used across all files.
 
 ### TO DOs
-Implemeant variance update step on NOTEARS
+* Implemeant variance update step on NOTEARS
